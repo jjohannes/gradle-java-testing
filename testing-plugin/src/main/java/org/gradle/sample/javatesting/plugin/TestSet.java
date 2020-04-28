@@ -33,7 +33,6 @@ class TestSet {
         testTask.configure(t -> t.setTestClassesDirs(sourceSet.getOutput().getClassesDirs()));
         testsAsClasses(testTask);
         findTestImplementation().getDependencies().add(dependencies.create(project));
-        tasks.named("check").configure(t -> t.dependsOn(testTask));
     }
 
     void useJUnit4(String version, Action<? super TestSetSpec> categories) {
@@ -44,8 +43,11 @@ class TestSet {
 
     private void useJUnit4(String version, TestSetSpec testConfig) {
         TaskProvider<Test> testTask = findTestTask();
-        testTask.configure(Test::useJUnit);
         testTask.configure(t -> t.useJUnit(p -> p.excludeCategories(testConfig.getTagsOrCategories().toArray(new String[0]))));
+        findTestImplementation().getDependencies().add(dependencies.create("junit:junit:" + version));
+        if (testConfig.isTestsAsJar()) {
+            testsAsJar(testTask);
+        }
         for (String tag : testConfig.getTagsOrCategories()) {
             TaskProvider<Test> tagTestTask = maybeRegisterTestTask(sourceSet.getName() + sanitizeName(tag));
             tagTestTask.configure(t -> t.setTestClassesDirs(sourceSet.getOutput().getClassesDirs()));
@@ -53,10 +55,7 @@ class TestSet {
             testsAsClasses(tagTestTask);
             tasks.named("check").configure(t -> t.dependsOn(tagTestTask));
         }
-        findTestImplementation().getDependencies().add(dependencies.create("junit:junit:" + version));
-        if (testConfig.isTestsAsJar()) {
-            testsAsJar();
-        }
+
     }
 
     void useJUnit5(String version, Action<? super TestSetSpec> testConfig) {
@@ -68,6 +67,11 @@ class TestSet {
     private void useJUnit5(String version, TestSetSpec testConfig) {
         TaskProvider<Test> testTask = findTestTask();
         testTask.configure(t -> t.useJUnitPlatform(p -> p.excludeTags(testConfig.getTagsOrCategories().toArray(new String[0]))));
+        findTestImplementation().getDependencies().add(dependencies.create("org.junit.jupiter:junit-jupiter-api:" + version));
+        findTestRuntimeOnly().getDependencies().add(dependencies.create("org.junit.jupiter:junit-jupiter-engine:" + version));
+        if (testConfig.isTestsAsJar()) {
+            testsAsJar(testTask);
+        }
         for (String tag : testConfig.getTagsOrCategories()) {
             TaskProvider<Test> tagTestTask = maybeRegisterTestTask(sourceSet.getName() + sanitizeName(tag));
             tagTestTask.configure(t -> t.setTestClassesDirs(sourceSet.getOutput().getClassesDirs()));
@@ -75,28 +79,45 @@ class TestSet {
             testsAsClasses(tagTestTask);
             tasks.named("check").configure(t -> t.dependsOn(tagTestTask));
         }
-        findTestImplementation().getDependencies().add(dependencies.create("org.junit.jupiter:junit-jupiter-api:" + version));
-        findTestRuntimeOnly().getDependencies().add(dependencies.create("org.junit.jupiter:junit-jupiter-engine:" + version));
+    }
+
+    void useTestNG(String version, Action<? super TestSetSpec> testConfig) {
+        TestSetSpec testTags = new TestSetSpec();
+        testConfig.execute(testTags);
+        useTestNG(version, testTags);
+    }
+
+    private void useTestNG(String version, TestSetSpec testConfig) {
+        TaskProvider<Test> testTask = findTestTask();
+        testTask.configure(t -> t.useTestNG(p -> p.excludeGroups(testConfig.getTagsOrCategories().toArray(new String[0]))));
+        findTestImplementation().getDependencies().add(dependencies.create("org.testng:testng:" + version));
         if (testConfig.isTestsAsJar()) {
-            testsAsJar();
+            testsAsJar(testTask);
+        }
+        for (String group : testConfig.getTagsOrCategories()) {
+            TaskProvider<Test> tagTestTask = maybeRegisterTestTask(sourceSet.getTaskName(null, sanitizeName(group)));
+            tagTestTask.configure(t -> t.setTestClassesDirs(sourceSet.getOutput().getClassesDirs()));
+            tagTestTask.configure(t -> t.useTestNG(p -> p.includeGroups(group)));
+
+            if (testConfig.isTestsAsJar()) {
+                testsAsJar(tagTestTask);
+            } else {
+                testsAsClasses(tagTestTask);
+            }
+            tasks.named("check").configure(t -> t.dependsOn(tagTestTask));
         }
     }
 
     private String sanitizeName(String tag) {
         //TODO remove spaces and replace && by And etc
-        return tag.substring(0, 1).toUpperCase() + tag.substring(1);
+        return tag;
     }
-
-    // TODO TestNG
-    // TODO ??? void mainAsClasses() { } vs mainAsJar()
-    // TODO test fixtures?
 
     void testsAsClasses(TaskProvider<Test> testTask) {
         testTask.configure(t -> t.setClasspath(sourceSet.getRuntimeClasspath()));
     }
 
-    void testsAsJar() {
-        TaskProvider<Test> testTask = findTestTask();
+    void testsAsJar(TaskProvider<Test> testTask) {
         TaskProvider<Jar> testJarTask;
         if (!tasks.getNames().contains(sourceSet.getJarTaskName())) {
             testJarTask = tasks.register(sourceSet.getJarTaskName(), Jar.class, t -> {
@@ -125,7 +146,12 @@ class TestSet {
     private TaskProvider<Test> maybeRegisterTestTask(String name) {
         if (tasks.getNames().contains(name)) {
             return tasks.named(name, Test.class);
+        } else {
+            TaskProvider<Test> testTask = tasks.register(name, Test.class);
+            tasks.named("check").configure(t -> t.dependsOn(testTask));
+            return testTask;
         }
-        return tasks.register(name, Test.class);
     }
+
+    // TODO test fixtures?
 }

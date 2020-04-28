@@ -31,7 +31,7 @@ public class JavaTestingExtension {
     }
 
     public void registerJUnit5TestSet(String name, String version, Action<? super TestSetSpec> conf) {
-        TestSet testSet = new TestSet(maybeCreateSourceSet(name), project);
+        TestSet testSet = new TestSet(sourceSets.maybeCreate(name), project);
         testSet.init();
         testSet.useJUnit5(version, conf);
     }
@@ -49,12 +49,26 @@ public class JavaTestingExtension {
     }
 
     public void registerJUnit4TestSet(String name, String version, Action<? super TestSetSpec> conf) {
-        TestSet testSet = new TestSet(maybeCreateSourceSet(name), project);
+        TestSet testSet = new TestSet(sourceSets.maybeCreate(name), project);
         testSet.init();
         testSet.useJUnit4(version, conf);
     }
 
-    private SourceSet maybeCreateSourceSet(String name) {
-        return sourceSets.maybeCreate(name);
+    public void registerTestNGTestSet(String name) {
+        registerTestNGTestSet(name, "latest.release");
+    }
+
+    public void registerTestNGTestSet(String name, String version) {
+        registerTestNGTestSet(name, version, testSetSpec -> { });
+    }
+
+    public void registerTestNGTestSet(String name, Action<? super TestSetSpec> conf) {
+        registerTestNGTestSet(name, "latest.release", conf);
+    }
+
+    public void registerTestNGTestSet(String name, String version, Action<? super TestSetSpec> conf) {
+        TestSet testSet = new TestSet(sourceSets.maybeCreate(name), project);
+        testSet.init();
+        testSet.useTestNG(version, conf);
     }
 }

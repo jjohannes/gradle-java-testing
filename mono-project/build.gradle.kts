@@ -15,10 +15,14 @@ javaTesting {
         extraGroup("slow")
     }
     registerJUnit4TestSet("testsJunit4") {
-        extraGroup("SlowTests")
+        extraGroup("org.gradle.sample.testing.SlowTests")
     }
     registerJUnit5TestSet("testingModuleJunit5") {
         testsAsJar()
+    }
+
+    registerTestNGTestSet("testsTestNG") {
+        extraGroup("slow")
     }
 
     registerJUnit5TestSet("testsJunit5Vintage")
