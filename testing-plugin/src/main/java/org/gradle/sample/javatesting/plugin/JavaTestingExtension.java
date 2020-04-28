@@ -2,6 +2,7 @@ package org.gradle.sample.javatesting.plugin;
 
 import org.gradle.api.Action;
 import org.gradle.api.Project;
+import org.gradle.api.tasks.SourceSet;
 import org.gradle.api.tasks.SourceSetContainer;
 
 public class JavaTestingExtension {
@@ -17,22 +18,43 @@ public class JavaTestingExtension {
         this.project = project;
     }
 
-    public void registerTestSet(String name) {
-        registerTestSet(name, null);
+    public void registerJUnit5TestSet(String name) {
+        registerJUnit5TestSet(name, "latest.release");
     }
 
-    public void registerTestSet(String name, Action<? super TestSet> conf) {
-        TestSet testSet = new TestSet(sourceSets.create(name), project);
+    public void registerJUnit5TestSet(String name, String version) {
+        registerJUnit5TestSet(name, version, testSetSpec -> { });
+    }
+
+    public void registerJUnit5TestSet(String name, Action<? super TestSetSpec> conf) {
+        registerJUnit5TestSet(name, "latest.release", conf);
+    }
+
+    public void registerJUnit5TestSet(String name, String version, Action<? super TestSetSpec> conf) {
+        TestSet testSet = new TestSet(maybeCreateSourceSet(name), project);
         testSet.init();
-        if (conf != null) {
-            configureTestSet(name, conf);
-        } else {
-            testSet.useJUnit5();
-        }
+        testSet.useJUnit5(version, conf);
     }
 
-    public void configureTestSet(String name, Action<? super TestSet> conf) {
-        TestSet testSet = new TestSet(sourceSets.getByName(name), project);
-        conf.execute(testSet);
+    public void registerJUnit4TestSet(String name) {
+        registerJUnit4TestSet(name, "latest.release");
+    }
+
+    public void registerJUnit4TestSet(String name, String version) {
+        registerJUnit4TestSet(name, version, testSetSpec -> { });
+    }
+
+    public void registerJUnit4TestSet(String name, Action<? super TestSetSpec> conf) {
+        registerJUnit4TestSet(name, "latest.release", conf);
+    }
+
+    public void registerJUnit4TestSet(String name, String version, Action<? super TestSetSpec> conf) {
+        TestSet testSet = new TestSet(maybeCreateSourceSet(name), project);
+        testSet.init();
+        testSet.useJUnit4(version, conf);
+    }
+
+    private SourceSet maybeCreateSourceSet(String name) {
+        return sourceSets.maybeCreate(name);
     }
 }

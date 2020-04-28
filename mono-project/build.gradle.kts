@@ -11,23 +11,17 @@ java {
 }
 
 javaTesting {
-    registerTestSet("testsJunit5") {
-        useJUnit5 {
-            extraGroup("slow")
-        }
+    registerJUnit5TestSet("test") {
+        extraGroup("slow")
     }
-    registerTestSet("testsJunit4") {
-        useJUnit4 {
-            extraGroup("SlowTests")
-        }
+    registerJUnit4TestSet("testsJunit4") {
+        extraGroup("SlowTests")
     }
-
-    registerTestSet("testingModuleJunit5") {
-        useJUnit5()
+    registerJUnit5TestSet("testingModuleJunit5") {
         testsAsJar()
     }
 
-    registerTestSet("testsJunit5Vintage")
+    registerJUnit5TestSet("testsJunit5Vintage")
 }
 
 dependencies {
@@ -35,4 +29,4 @@ dependencies {
     "testsJunit5VintageRuntimeOnly"("org.junit.vintage:junit-vintage-engine:latest.release")
 }
 
-tasks.withType(Test::class).configureEach { testLogging.showStandardStreams = true }
+tasks.withType<Test>().configureEach { testLogging.showStandardStreams = true }
